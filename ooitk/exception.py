@@ -28,53 +28,8 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 '''
 
-import requests
-from ooitk.serial import Serializer
-from ooitk.exception import ConnectionError, GatewayError
+class ConnectionError(Exception):
+    pass
 
-class Session:
-    host='localhost'
-    port=5000
-    def __init__(self, host, port):
-        self.url = 'http://%s:%s/ion-service/' % (host, port)
-    
-
-class Service:
-    session=None
-    def __init__(self, session):
-        self.session = session
-
-    def request(self,service_name, op, **kwargs):
-        url = self.session.url
-        url = url + service_name + '/' + op
-        r = { "serviceRequest": { 
-            "serviceName" : service_name, 
-            "serviceOp" : op, 
-            "params" : kwargs
-            }
-        }
-        resp = requests.post(url, data={'payload':Serializer.encode(r)})
-        if resp.status_code == 200:
-            data = resp.json()
-            if 'GatewayError' in data['data']:
-                error = GatewayError(data['data']['Message'])
-                error.trace = data['data']['Trace']
-                raise error
-            if 'GatewayResponse' in data['data']:
-                return data['data']['GatewayResponse']
-
-        raise ConnectionError("HTTP [%s]" % resp.status_code)
-
-
-def retrieve(session, **kwargs):
-    url = session.url
-    url += 'retrieve'
-
-
-    r = {'serviceRequest':{'params':kwargs}}
-    
-    resp = requests.post(url, data={'payload':Serializer.encode(r)})
-    data = Serializer.decode(resp.text)
-    data = data['data']['GatewayResponse']['value_dict']
-    return data
-
+class GatewayError(Exception):
+    pass

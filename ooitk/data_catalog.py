@@ -28,53 +28,42 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 '''
 
-import requests
-from ooitk.serial import Serializer
-from ooitk.exception import ConnectionError, GatewayError
+from ooitk.session import Service
+from pydap.client import open_url
 
-class Session:
-    host='localhost'
-    port=5000
-    def __init__(self, host, port):
-        self.url = 'http://%s:%s/ion-service/' % (host, port)
-    
+class DataProductCatalog(Service):
+    static_dap_host = 'localhost'
+    static_dap_port = 8001
 
-class Service:
-    session=None
     def __init__(self, session):
-        self.session = session
+        Service.__init__(self, session)
 
-    def request(self,service_name, op, **kwargs):
-        url = self.session.url
-        url = url + service_name + '/' + op
-        r = { "serviceRequest": { 
-            "serviceName" : service_name, 
-            "serviceOp" : op, 
-            "params" : kwargs
-            }
-        }
-        resp = requests.post(url, data={'payload':Serializer.encode(r)})
-        if resp.status_code == 200:
-            data = resp.json()
-            if 'GatewayError' in data['data']:
-                error = GatewayError(data['data']['Message'])
-                error.trace = data['data']['Trace']
-                raise error
-            if 'GatewayResponse' in data['data']:
-                return data['data']['GatewayResponse']
+        self.data_products_cache = []
+        self.refresh()
 
-        raise ConnectionError("HTTP [%s]" % resp.status_code)
+    def find_data_products(self):
 
+        data_products = self.request('resource_registry', 'find_resources', 
+                                     restype='DataProduct')
+        return data_products
 
-def retrieve(session, **kwargs):
-    url = session.url
-    url += 'retrieve'
+    def refresh(self):
+        data_products, irrelevant = self.find_data_products()
+        self.data_products_cache = data_products
 
+    def download(self, data_product_id):
+        dataset_ids, irrelevant = self.request('resource_registry', 'find_objects', subject=data_product_id, predicate='hasDataset', id_only=True)
+        dataset_id = dataset_ids[0]
 
-    r = {'serviceRequest':{'params':kwargs}}
-    
-    resp = requests.post(url, data={'payload':Serializer.encode(r)})
-    data = Serializer.decode(resp.text)
-    data = data['data']['GatewayResponse']['value_dict']
-    return data
+        dap_url = 'http://%s:%s/%s' %(self.static_dap_host, self.static_dap_port, dataset_id)
+        ds = open_url(dap_url)
+        return ds
+
+    def list_data_products(self):
+        return self.data_products_cache
+
+    def find_data_product(self, name_like):
+        relevant = [i for i in self.data_products_cache if name_like.lower() in i['name'].lower()]
+        return relevant
+
 
