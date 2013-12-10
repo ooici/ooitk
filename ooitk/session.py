@@ -84,6 +84,8 @@ def retrieve(session, **kwargs):
 
 class ERDDAPSession:
     def __init__(self, erddap_url):
+        if erddap_url.endswith('.html'):
+            erddap_url = erddap_url[:-5]
         self.data_product_id = erddap_url.split('/')[-1]
         self.nc_url = erddap_url + '.nc?&orderBy%28%22time%22%29'
         self.cache = None
