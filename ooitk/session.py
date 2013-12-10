@@ -28,9 +28,13 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 '''
 
-import requests
 from ooitk.serial import Serializer
 from ooitk.exception import ConnectionError, GatewayError
+from tempfile import gettempdir
+from uuid import uuid4
+from netCDF4 import Dataset
+import os
+import requests
 
 class Session:
     host='localhost'
@@ -78,3 +82,32 @@ def retrieve(session, **kwargs):
     data = data['data']['GatewayResponse']['value_dict']
     return data
 
+class ERDDAPSession:
+    def __init__(self, erddap_url):
+        self.data_product_id = erddap_url.split('/')[-1]
+        self.nc_url = erddap_url + '.nc?&orderBy%28%22time%22%29'
+        self.cache = None
+        self.nc = None
+        
+    def open(self):
+        tmpfile = os.path.join(gettempdir(), self.data_product_id)
+        chunk_size = 4096
+        r = requests.get(self.nc_url)
+        with open(tmpfile, 'wb') as f:
+            for chunk in r.iter_content(chunk_size):
+                f.write(chunk)
+        self.cache = tmpfile
+        self.nc = Dataset(self.cache)
+
+    def close(self):
+        if self.nc is not None:
+            self.nc.close()
+            self.nc = None
+        if self.cache is not None:
+            os.remove(self.cache)
+            self.cache = None
+
+    def __getattr__(self, key):
+        if key in self.__dict__:
+            return self.__dict__[key]
+        return getattr(self.nc,key)
