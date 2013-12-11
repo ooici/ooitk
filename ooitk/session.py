@@ -91,10 +91,15 @@ class ERDDAPSession:
         self.cache = None
         self.nc = None
         
-    def open(self):
+    def open(self, constraints=None):
         tmpfile = os.path.join(gettempdir(), self.data_product_id)
         chunk_size = 4096
-        r = requests.get(self.nc_url)
+        if constraints:
+            const_str = '&'.join(constraints)
+            url = self.nc_url + '&' + const_str 
+            r = requests.get(url)
+        else:
+            r = requests.get(self.nc_url)
         with open(tmpfile, 'wb') as f:
             for chunk in r.iter_content(chunk_size):
                 f.write(chunk)
