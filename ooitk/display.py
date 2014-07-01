@@ -28,36 +28,25 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 '''
 
-import requests
 
-class DataProductCatalog(object):
+class ListTable(list):
+    """ 
+    Overridden list class which takes a 2-dimensional list of 
+    the form [[1,2,3],[4,5,6]], and renders an HTML Table in 
+    IPython Notebook. 
 
-    def __init__(self, host='localhost', port=3000):
-        self.host = host
-        self.port = port
-        self.cached = None
+    Shamefully stolen from: http://calebmadrigal.com/display-list-as-table-in-ipython-notebook/
+       
+    """
 
-
-    def list_data_products(self, refresh=False):
-        '''
-        Returns a list of data product resources
-        '''
-        if not refresh and self.cached is not None:
-            return self.cached
-
-        resp = requests.get('http://%s:%s/DataProduct/list/' % (self.host, self.port), headers={'Content-type':'application/json', 'Accept':'application/json'})
-        if resp.status_code == 200:
-            content = resp.json()
-            content = content['data'] # Now a list of data products
-            self.cached = content
-            return content
-        return []
-
-    def named_listing(self):
-        '''
-        Returns a dictionary of Data Product Name and Data Product Resource
-        '''
-        listing = self.list_data_products()
-        listing = {i['name'] : i for i in listing}
-        return listing
-
+    def _repr_html_(self):
+        html = ["<table>"]
+        for row in self:
+            html.append("<tr>")
+            
+            for col in row:
+                html.append("<td>{0}</td>".format(col))
+            
+            html.append("</tr>")
+        html.append("</table>")
+        return ''.join(html)
