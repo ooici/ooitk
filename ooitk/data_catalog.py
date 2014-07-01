@@ -60,4 +60,12 @@ class DataProductCatalog(object):
         listing = self.list_data_products()
         listing = {i['name'] : i for i in listing}
         return listing
+    
+    def list_parameters(self, data_product_id):
+        resp = requests.get('http://%s:%s/DataProduct/parameters/%s/' % (self.host, self.port, data_product_id))
+        if resp.status_code == 200:
+            content = resp.json()
+            content = content['data']
+            return content
+        return []
 
