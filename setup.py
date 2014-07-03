@@ -35,6 +35,7 @@ setup(name = 'ooitk',
         keywords=['oceanography', 'seawater'],
         install_requires=[
             'ipython==0.13.0',
+            'requests',
             'readline',
         ]
 )
