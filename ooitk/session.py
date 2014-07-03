@@ -114,6 +114,13 @@ class ERDDAPSession:
             os.remove(self.cache)
             self.cache = None
 
+    def print_vars(self):
+        if self.nc is not None:
+            for var in self.nc.variables:
+                print var
+        else:
+            print 'Open an erddap session first!'
+
     def __getattr__(self, key):
         if key in self.__dict__:
             return self.__dict__[key]
